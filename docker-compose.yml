@@ -1,0 +1,28 @@
+version: '3.5'
+
+services:
+  files_downloader:
+    build:
+      context: ./
+      dockerfile: ./docker/Dockerfile
+    image: files_downloader
+    container_name: ${APP_NAME}_files_downloader
+    restart: unless-stopped
+    working_dir: /var/www/files_downloader
+    volumes:
+      - ./:/var/www/files_downloader
+  nginx_files_downloader:
+    image: nginx:alpine
+    container_name: ${APP_NAME}_files_downloader_nginx
+    restart: unless-stopped
+    ports:
+    - 8383:80
+    volumes:
+      - ./:/var/www/files_downloader
+      - ./docker/nginx:/etc/nginx/conf.d
+    depends_on:
+      - files_downloader
+networks:
+  default:
+    external: true
+    name: microservices
