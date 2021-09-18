@@ -3,26 +3,65 @@ version: '3.5'
 services:
   files_downloader:
     build:
-      context: ./
+      context: ${REL_PATH_FILES_DOWNLOADER:-.}/
       dockerfile: ./docker/Dockerfile
     image: files_downloader
     container_name: ${APP_NAME}_files_downloader
     restart: unless-stopped
-    working_dir: /var/www/files_downloader
+    working_dir: /var/www/app
     volumes:
-      - ./:/var/www/files_downloader
+      - ${REL_PATH_FILES_DOWNLOADER:-.}/:/var/www/app
   nginx_files_downloader:
     image: nginx:alpine
     container_name: ${APP_NAME}_files_downloader_nginx
     restart: unless-stopped
     ports:
-    - 8383:80
+    - "8383:80"
     volumes:
-      - ./:/var/www/files_downloader
-      - ./docker/nginx:/etc/nginx/conf.d
+      - ${REL_PATH_FILES_DOWNLOADER:-.}/:/var/www/app
+      - ${REL_PATH_FILES_DOWNLOADER:-.}/docker/nginx:/etc/nginx/conf.d
     depends_on:
+      - files_downloader
+  db_files:
+    image: mysql:8
+    container_name: db_files
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - "./docker/db_files:/var/lib/mysql"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: db_files
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3307:3306"
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ${APP_NAME}_rabbitmq
+    volumes:
+      #- ./docker/rabbitmq/etc/:/etc/rabbitmq/
+      - ./docker/rabbitmq/data/:/var/lib/rabbitmq/
+      - ./docker/rabbitmq/logs/:/var/log/rabbitmq/
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+  worker_files_downloader_failings_broker_jobs:
+    build:
+      context: ${REL_PATH_FILES_DOWNLOADER:-.}/
+      dockerfile: ./docker/Dockerfile
+    image: files_downloader
+    container_name: ${APP_NAME}_worker_files_downloader_failings_broker_jobs
+    restart: unless-stopped
+    working_dir: /var/www/app
+    command: 'sh -c "sleep 10 && php artisan broker_fails_handler:start"'
+    volumes:
+      - ${REL_PATH_FILES_DOWNLOADER:-.}/:/var/www/app
+    depends_on:
+      - rabbitmq
       - files_downloader
 networks:
   default:
-    external: true
     name: microservices

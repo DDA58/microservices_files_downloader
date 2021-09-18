@@ -1,13 +1,15 @@
 <?php
 
-namespace App\Listeners;
+declare(strict_types=1);
+
+namespace App\Subscribers;
 
 use App\Events\FileDownloaded;
 use App\Models\Log;
 
-class AddLog
+class LogFileDownloadedSubscriber
 {
-    public function handle(FileDownloaded $event)
+    public function handle(FileDownloaded $event): void
     {
         $log = new Log();
         $log->file_id = $event->data['file_id'];

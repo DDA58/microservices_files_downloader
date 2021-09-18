@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Events\FileDownloaded;
 use App\Listeners\IncrementDownloadCounter;
 use App\Listeners\AddLog;
+use App\Subscribers\FileDownloadedSubscriber;
+use App\Subscribers\LogFileDownloadedSubscriber;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Event;
 
@@ -17,8 +19,8 @@ class EventServiceProvider extends ServiceProvider
      */
     protected $listen = [
         FileDownloaded::class => [
-            AddLog::class,
-            IncrementDownloadCounter::class,
+            LogFileDownloadedSubscriber::class,
+            FileDownloadedSubscriber::class,
         ],
     ];
 
